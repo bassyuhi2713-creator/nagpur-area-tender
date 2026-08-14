@@ -118,16 +118,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenAuth }) => {
         </div>
       </div>
 
-      <div className="mt-12 bg-blue-50 border border-blue-200 rounded-xl p-5 text-center text-xs text-blue-900">
-        <span className="font-bold block mb-1">Key Operational Features Included:</span>
-        <ul className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-[11px] font-medium text-gray-700">
-          <li>✔ New Sub Area Execution: <strong>Nagpur Area Execution</strong></li>
-          <li>✔ Auto Bid Validity (+120 Days calculation from Bid Submission End)</li>
-          <li>⚡ Priority Highlighting for Bid Validities expiring within <strong>20 Days</strong></li>
-          <li>✔ Role-based visibility for Staff Officer &amp; SAEs</li>
-          <li>✔ Export to CSV &amp; Printable PDF Reports</li>
-        </ul>
-      </div>
     </div>
   );
 };
