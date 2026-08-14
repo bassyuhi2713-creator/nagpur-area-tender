@@ -139,6 +139,15 @@ app.post('/api/tenders', (req, res) => {
   res.json({ success: true, data: tender, totalCount: tenders.length });
 });
 
+function normalizeDescription(desc: any): string {
+  if (!desc) return '';
+  return String(desc)
+    .trim()
+    .toLowerCase()
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s+/g, ' ');
+}
+
 // POST batch tenders (Excel / CSV upload)
 app.post('/api/tenders/batch', (req, res) => {
   const { tenders: incomingTenders, mode = 'merge' } = req.body;
@@ -148,6 +157,8 @@ app.post('/api/tenders/batch', (req, res) => {
 
   let finalTenders: any[] = [];
   const currentTenders = readTenders();
+  let updatedCount = 0;
+  let addedCount = 0;
 
   if (mode === 'replace') {
     finalTenders = incomingTenders.map((t, idx) => ({
@@ -155,17 +166,54 @@ app.post('/api/tenders/batch', (req, res) => {
       id: t.id || `TND-IMP-${Date.now()}-${idx + 1}`,
       createdAt: t.createdAt || new Date().toISOString()
     }));
+    addedCount = finalTenders.length;
   } else {
-    // Merge mode: update existing by ID, append new ones
+    // Merge mode:
+    // ONLY overwrite / update if the exact same Tender Description is already in database.
+    // If the description is not found, automatically merge (append/insert) as a new tender record without overwriting.
     finalTenders = [...currentTenders];
-    for (const item of incomingTenders) {
-      if (!item.description) continue;
-      const itemId = item.id || `TND-IMP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-      const idx = finalTenders.findIndex((t) => t.id === itemId || (t.description === item.description && t.subArea === item.subArea));
-      if (idx >= 0) {
-        finalTenders[idx] = { ...finalTenders[idx], ...item, id: finalTenders[idx].id, updatedAt: new Date().toISOString() };
+
+    for (let idx = 0; idx < incomingTenders.length; idx++) {
+      const item = incomingTenders[idx];
+      if (!item.description || !String(item.description).trim()) continue;
+
+      const normIncomingDesc = normalizeDescription(item.description);
+      const incomingId = (item.id && !String(item.id).startsWith('TND-IMP-') && isNaN(Number(item.id))) 
+        ? String(item.id).trim() 
+        : '';
+
+      // Match by normalized Tender Description or explicit custom tender ID
+      const existingIdx = finalTenders.findIndex((t) => {
+        const normExistingDesc = normalizeDescription(t.description);
+        if (normExistingDesc && normExistingDesc === normIncomingDesc) {
+          return true;
+        }
+        if (incomingId && t.id && t.id.toLowerCase() === incomingId.toLowerCase()) {
+          return true;
+        }
+        return false;
+      });
+
+      if (existingIdx >= 0) {
+        // OVERWRITE / UPDATE existing tender record
+        finalTenders[existingIdx] = {
+          ...finalTenders[existingIdx],
+          ...item,
+          id: finalTenders[existingIdx].id, // Preserve original established ID
+          createdAt: finalTenders[existingIdx].createdAt || item.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        updatedCount++;
       } else {
-        finalTenders.unshift({ ...item, id: itemId, createdAt: item.createdAt || new Date().toISOString() });
+        // MERGE AS NEW TENDER
+        const uniqueId = incomingId || item.id || `TND-${Date.now().toString().slice(-6)}-${idx + 1}-${Math.floor(Math.random() * 1000)}`;
+        finalTenders.unshift({
+          ...item,
+          id: uniqueId,
+          createdAt: item.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        addedCount++;
       }
     }
   }
@@ -180,15 +228,17 @@ app.post('/api/tenders/batch', (req, res) => {
     user: req.body.user || 'Tender Cell',
     role: req.body.role || 'Tender Cell',
     action: 'Excel Data Imported',
-    details: `Imported ${incomingTenders.length} tender records (${mode === 'replace' ? 'Full Replace' : 'Merge / Update'}). Total active: ${finalTenders.length}`
+    details: `Imported ${incomingTenders.length} tenders: ${addedCount} newly added, ${updatedCount} updated (matched description). Total active: ${finalTenders.length}`
   });
   writeLogs(logs);
 
   res.json({
     success: true,
-    message: `Successfully processed ${incomingTenders.length} tender records`,
+    message: `Successfully processed ${incomingTenders.length} tender records (${addedCount} added, ${updatedCount} updated)`,
     data: finalTenders,
-    count: finalTenders.length
+    count: finalTenders.length,
+    addedCount,
+    updatedCount
   });
 });
 

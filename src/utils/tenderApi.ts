@@ -40,7 +40,7 @@ export async function batchUploadServerTenders(
   mode: 'merge' | 'replace',
   user?: string,
   role?: string
-): Promise<{ success: boolean; data?: Tender[]; count?: number; message?: string }> {
+): Promise<{ success: boolean; data?: Tender[]; count?: number; addedCount?: number; updatedCount?: number; message?: string }> {
   try {
     const res = await fetch('/api/tenders/batch', {
       method: 'POST',

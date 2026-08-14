@@ -229,8 +229,10 @@ export default function App() {
 
       if (res.success && res.data) {
         setTenders(res.data);
+        const addedMsg = res.addedCount !== undefined ? `${res.addedCount} new added` : `${importedTenders.length} synced`;
+        const updatedMsg = res.updatedCount ? `, ${res.updatedCount} updated (matched description)` : '';
         showToast(
-          `Successfully synced ${importedTenders.length} tenders! Now visible on all devices and user logins.`,
+          `Import successful: ${addedMsg}${updatedMsg}. Visible on all systems.`,
           'success'
         );
       } else {
@@ -240,10 +242,27 @@ export default function App() {
         } else {
           setTenders((prev) => {
             const copy = [...prev];
+            const normalizeDesc = (s: string) => (s || '').trim().toLowerCase().replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ');
+
             importedTenders.forEach((item) => {
-              const idx = copy.findIndex((c) => c.id === item.id);
-              if (idx >= 0) copy[idx] = item;
-              else copy.unshift(item);
+              const normIncoming = normalizeDesc(item.description);
+              const idx = copy.findIndex((c) => {
+                const normExisting = normalizeDesc(c.description);
+                if (normExisting && normExisting === normIncoming) return true;
+                if (item.id && !item.id.startsWith('TND-') && isNaN(Number(item.id)) && c.id.toLowerCase() === item.id.toLowerCase()) return true;
+                return false;
+              });
+
+              if (idx >= 0) {
+                copy[idx] = {
+                  ...copy[idx],
+                  ...item,
+                  id: copy[idx].id,
+                  updatedAt: new Date().toISOString()
+                };
+              } else {
+                copy.unshift(item);
+              }
             });
             return copy;
           });
@@ -389,6 +408,7 @@ export default function App() {
       <ExcelImportModal
         isOpen={isImportModalOpen}
         currentUser={currentUser}
+        existingTenders={tenders}
         onClose={() => setIsImportModalOpen(false)}
         onImportSuccess={handleBatchImport}
       />

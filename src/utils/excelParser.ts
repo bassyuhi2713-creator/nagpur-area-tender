@@ -106,6 +106,15 @@ function parseNumber(val: any): number {
   return isNaN(num) ? 0 : num;
 }
 
+export function normalizeTenderDescription(desc: any): string {
+  if (!desc) return '';
+  return String(desc)
+    .trim()
+    .toLowerCase()
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s+/g, ' ');
+}
+
 export async function parseExcelOrCSV(file: File): Promise<ParseResult> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -141,7 +150,7 @@ export async function parseExcelOrCSV(file: File): Promise<ParseResult> {
           });
 
           // Extract fields using flexible aliases
-          const description = 
+          const rawDescription = 
             normalizedRow['workdescription'] ||
             normalizedRow['description'] ||
             normalizedRow['nameofwork'] ||
@@ -154,24 +163,39 @@ export async function parseExcelOrCSV(file: File): Promise<ParseResult> {
             row['Description'] ||
             '';
 
-          if (!description || String(description).trim().length === 0) {
+          const description = String(rawDescription).trim();
+
+          if (!description || description.length === 0) {
             errors.push(`Row ${idx + 2}: Skipped because Work Description is missing.`);
             return;
           }
 
+          // Extract Tender ID if explicitly provided (ignoring generic row serial numbers like sno, slno, 1, 2)
           const rawId = 
             normalizedRow['tenderid'] ||
-            normalizedRow['id'] ||
-            normalizedRow['refno'] ||
-            normalizedRow['referenceno'] ||
+            normalizedRow['tenderno'] ||
             normalizedRow['nitno'] ||
-            normalizedRow['sno'] ||
+            normalizedRow['nitnumber'] ||
+            normalizedRow['nit'] ||
+            normalizedRow['referenceno'] ||
+            normalizedRow['refno'] ||
             row['Tender ID'] ||
-            row['ID'];
+            row['Tender No'] ||
+            row['NIT No'] ||
+            row['NIT Number'];
 
-          const id = (rawId && String(rawId).trim() !== '' && !String(rawId).startsWith('__'))
-            ? String(rawId).trim()
-            : `TND-${Date.now().toString().slice(-6)}-${idx + 1}`;
+          let id = '';
+          if (rawId && String(rawId).trim() !== '' && !String(rawId).startsWith('__')) {
+            const cleanId = String(rawId).trim();
+            // Don't treat a pure integer <= 10000 as a Tender ID (it's likely a row number S.No.)
+            if (!/^\d{1,4}$/.test(cleanId)) {
+              id = cleanId;
+            }
+          }
+
+          if (!id) {
+            id = `TND-${Date.now().toString().slice(-6)}-${idx + 1}`;
+          }
 
           const rawSubArea = 
             normalizedRow['subarea'] ||

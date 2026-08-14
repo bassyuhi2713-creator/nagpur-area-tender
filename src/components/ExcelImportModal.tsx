@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Tender, User } from '../types';
-import { parseExcelOrCSV, downloadSampleExcelTemplate, ParseResult } from '../utils/excelParser';
+import { parseExcelOrCSV, downloadSampleExcelTemplate, ParseResult, normalizeTenderDescription } from '../utils/excelParser';
 import { formatINR, isUrgentValidity, getDaysUntilValidity } from '../utils/tenderUtils';
 import { 
   X, 
@@ -11,14 +11,16 @@ import {
   Download, 
   Layers, 
   RefreshCw, 
-  ArrowRight,
   Info,
-  Check
+  Check,
+  PlusCircle,
+  RotateCw
 } from 'lucide-react';
 
 interface ExcelImportModalProps {
   isOpen: boolean;
   currentUser: User | null;
+  existingTenders?: Tender[];
   onClose: () => void;
   onImportSuccess: (importedTenders: Tender[], mode: 'merge' | 'replace') => Promise<void>;
 }
@@ -26,6 +28,7 @@ interface ExcelImportModalProps {
 export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
   isOpen,
   currentUser,
+  existingTenders = [],
   onClose,
   onImportSuccess,
 }) => {
@@ -38,6 +41,30 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
   const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Analyze how many rows will be newly added vs how many will update existing records based on Work Description
+  const mergeStats = useMemo(() => {
+    if (!parseResult || parseResult.tenders.length === 0) {
+      return { willUpdateCount: 0, willAddCount: 0 };
+    }
+    const existingDescSet = new Set(
+      existingTenders.map((t) => normalizeTenderDescription(t.description)).filter(Boolean)
+    );
+
+    let willUpdateCount = 0;
+    let willAddCount = 0;
+
+    parseResult.tenders.forEach((item) => {
+      const norm = normalizeTenderDescription(item.description);
+      if (norm && existingDescSet.has(norm)) {
+        willUpdateCount++;
+      } else {
+        willAddCount++;
+      }
+    });
+
+    return { willUpdateCount, willAddCount };
+  }, [parseResult, existingTenders]);
 
   if (!isOpen) return null;
 
@@ -124,7 +151,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
               Upload / Import Excel & CSV Data
             </h2>
             <p className="text-xs text-gray-500">
-              Upload exported tender spreadsheets. Uploaded data is saved to the central cloud database and immediately visible to all users across all devices.
+              Auto-merges new tenders into the portal. Existing tenders are updated only when the Work Description matches.
             </p>
           </div>
         </div>
@@ -136,7 +163,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
             <div className="flex items-center gap-2">
               <Info className="w-4 h-4 text-[#003366] shrink-0" />
               <span>
-                Supports <strong>.xlsx</strong>, <strong>.xls</strong>, and <strong>.csv</strong> files with auto-calculation of 120-day validity and urgent flags.
+                Supports <strong>.xlsx</strong>, <strong>.xls</strong>, and <strong>.csv</strong> files with auto-merge, description deduplication, and +120-day validity.
               </span>
             </div>
             <button
@@ -209,21 +236,39 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
             <div className="space-y-4">
               {/* Summary Stats Bar */}
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2.5 flex-wrap">
                   <span className="inline-flex items-center gap-1.5 font-extrabold text-emerald-800 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300">
                     <CheckCircle2 className="w-4 h-4 text-emerald-700" />
-                    <span>{parseResult.validRows} Valid Tenders Detected</span>
+                    <span>{parseResult.validRows} Total Tenders in File</span>
                   </span>
+
+                  {importMode === 'merge' && (
+                    <>
+                      {mergeStats.willAddCount > 0 && (
+                        <span className="inline-flex items-center gap-1 font-bold text-blue-800 bg-blue-100 px-2.5 py-1 rounded-md border border-blue-200">
+                          <PlusCircle className="w-3.5 h-3.5 text-blue-700" />
+                          <span>{mergeStats.willAddCount} New (Will Merge)</span>
+                        </span>
+                      )}
+                      {mergeStats.willUpdateCount > 0 && (
+                        <span className="inline-flex items-center gap-1 font-bold text-amber-900 bg-amber-100 px-2.5 py-1 rounded-md border border-amber-300">
+                          <RotateCw className="w-3.5 h-3.5 text-amber-700" />
+                          <span>{mergeStats.willUpdateCount} Existing (Will Overwrite/Update)</span>
+                        </span>
+                      )}
+                    </>
+                  )}
+
                   {parseResult.errors.length > 0 && (
                     <span className="text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                      {parseResult.errors.length} rows skipped (missing required fields)
+                      {parseResult.errors.length} rows skipped (missing description)
                     </span>
                   )}
                 </div>
 
                 {/* Import Mode Radio Switch */}
                 <div className="flex items-center gap-4 font-bold text-gray-800">
-                  <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                  <label className="inline-flex items-center gap-1.5 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-2xs">
                     <input
                       type="radio"
                       name="importMode"
@@ -231,10 +276,9 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
                       onChange={() => setImportMode('merge')}
                       className="text-[#003366] focus:ring-[#003366]"
                     />
-                    <span>Merge / Update</span>
-                    <span className="text-[10px] text-gray-500 font-normal">(Updates existing, adds new)</span>
+                    <span className="text-[#003366]">Auto-Merge (Recommended)</span>
                   </label>
-                  <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                  <label className="inline-flex items-center gap-1.5 cursor-pointer text-gray-500 hover:text-red-700">
                     <input
                       type="radio"
                       name="importMode"
@@ -242,8 +286,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
                       onChange={() => setImportMode('replace')}
                       className="text-red-600 focus:ring-red-600"
                     />
-                    <span className="text-red-700">Replace All</span>
-                    <span className="text-[10px] text-gray-500 font-normal">(Overwrites all records)</span>
+                    <span>Replace All</span>
                   </label>
                 </div>
               </div>
@@ -251,15 +294,17 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
               {/* Data Preview Table */}
               <div className="border border-gray-200 rounded-xl overflow-hidden shadow-2xs">
                 <div className="bg-gray-100 px-3 py-2 text-xs font-bold text-gray-700 flex justify-between items-center">
-                  <span>Data Preview (Showing first {Math.min(5, parseResult.tenders.length)} of {parseResult.tenders.length} records)</span>
-                  <span className="text-[11px] text-gray-500 font-normal">Auto-mapped from sheet columns</span>
+                  <span>Data Preview (Showing first {Math.min(6, parseResult.tenders.length)} of {parseResult.tenders.length} records)</span>
+                  <span className="text-[11px] text-gray-500 font-normal">
+                    {importMode === 'merge' ? 'Matching descriptions will update existing; new descriptions will be added' : 'All existing records will be replaced'}
+                  </span>
                 </div>
-                <div className="overflow-x-auto max-h-56">
+                <div className="overflow-x-auto max-h-60">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead className="bg-[#003366] text-white font-bold text-[10px] uppercase">
                       <tr>
-                        <th className="p-2">Tender ID</th>
-                        <th className="p-2 min-w-[180px]">Work Description</th>
+                        <th className="p-2">Import Action</th>
+                        <th className="p-2 min-w-[200px]">Work Description</th>
                         <th className="p-2">Sub-Area</th>
                         <th className="p-2 text-right">Value (₹)</th>
                         <th className="p-2">Bid End Date</th>
@@ -268,12 +313,33 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {parseResult.tenders.slice(0, 5).map((t, idx) => {
+                      {parseResult.tenders.slice(0, 6).map((t, idx) => {
                         const urgent = isUrgentValidity(t);
                         const daysLeft = getDaysUntilValidity(t.validDate);
+                        const norm = normalizeTenderDescription(t.description);
+                        const isExistingMatch = existingTenders.some(
+                          (ex) => normalizeTenderDescription(ex.description) === norm
+                        );
+
                         return (
                           <tr key={idx} className={`hover:bg-gray-50 ${urgent ? 'bg-amber-50/60' : ''}`}>
-                            <td className="p-2 font-mono text-[11px] font-bold text-gray-700">{t.id}</td>
+                            <td className="p-2 whitespace-nowrap">
+                              {importMode === 'replace' ? (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 bg-red-100 text-red-800 rounded">
+                                  Replace
+                                </span>
+                              ) : isExistingMatch ? (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-100 text-amber-900 rounded border border-amber-300 flex items-center gap-1 w-fit">
+                                  <RotateCw className="w-2.5 h-2.5 text-amber-700" />
+                                  <span>Update Existing</span>
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded border border-emerald-300 flex items-center gap-1 w-fit">
+                                  <PlusCircle className="w-2.5 h-2.5 text-emerald-700" />
+                                  <span>Add New</span>
+                                </span>
+                              )}
+                            </td>
                             <td className="p-2 font-medium text-gray-900 truncate max-w-xs">{t.description}</td>
                             <td className="p-2 font-bold text-gray-800">{t.subArea}</td>
                             <td className="p-2 text-right font-bold text-gray-900">{formatINR(t.value)}</td>
