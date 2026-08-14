@@ -1,0 +1,6 @@
+{
+  "name": "WCL Nagpur Area Tender Portal",
+  "description": "Tender Monitoring Portal for WCL Nagpur Area Civil Division with Sub-Area management and urgent 20-day bid validity tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
