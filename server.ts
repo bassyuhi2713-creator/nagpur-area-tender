@@ -59,48 +59,68 @@ function getInitialSeedLogs(): any[] {
   return [];
 }
 
+// In-memory cache synced with disk for maximum speed & container reliability
+let memoryTenders: any[] | null = null;
+let memoryLogs: any[] | null = null;
+
 // Read & Write Helpers
 function readTenders(): any[] {
+  if (memoryTenders !== null && memoryTenders.length > 0) {
+    return memoryTenders;
+  }
   try {
     if (!fs.existsSync(TENDERS_FILE)) {
       const initial = getInitialSeedTenders();
       fs.writeFileSync(TENDERS_FILE, JSON.stringify(initial, null, 2), 'utf-8');
+      memoryTenders = initial;
       return initial;
     }
     const data = fs.readFileSync(TENDERS_FILE, 'utf-8');
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    memoryTenders = Array.isArray(parsed) ? parsed : [];
+    return memoryTenders;
   } catch (err) {
     console.error('Error reading tenders file:', err);
-    return getInitialSeedTenders();
+    memoryTenders = memoryTenders || getInitialSeedTenders();
+    return memoryTenders;
   }
 }
 
 function writeTenders(tenders: any[]): void {
+  memoryTenders = Array.isArray(tenders) ? tenders : [];
   try {
-    fs.writeFileSync(TENDERS_FILE, JSON.stringify(tenders, null, 2), 'utf-8');
+    fs.writeFileSync(TENDERS_FILE, JSON.stringify(memoryTenders, null, 2), 'utf-8');
   } catch (err) {
     console.error('Error writing tenders file:', err);
   }
 }
 
 function readLogs(): any[] {
+  if (memoryLogs !== null && memoryLogs.length > 0) {
+    return memoryLogs;
+  }
   try {
     if (!fs.existsSync(LOGS_FILE)) {
       const initial = getInitialSeedLogs();
       fs.writeFileSync(LOGS_FILE, JSON.stringify(initial, null, 2), 'utf-8');
+      memoryLogs = initial;
       return initial;
     }
     const data = fs.readFileSync(LOGS_FILE, 'utf-8');
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    memoryLogs = Array.isArray(parsed) ? parsed : [];
+    return memoryLogs;
   } catch (err) {
     console.error('Error reading logs file:', err);
-    return getInitialSeedLogs();
+    memoryLogs = memoryLogs || getInitialSeedLogs();
+    return memoryLogs;
   }
 }
 
 function writeLogs(logs: any[]): void {
+  memoryLogs = Array.isArray(logs) ? logs : [];
   try {
-    fs.writeFileSync(LOGS_FILE, JSON.stringify(logs, null, 2), 'utf-8');
+    fs.writeFileSync(LOGS_FILE, JSON.stringify(memoryLogs, null, 2), 'utf-8');
   } catch (err) {
     console.error('Error writing logs file:', err);
   }

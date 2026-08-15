@@ -1,0 +1,33 @@
+{
+  "entities": {
+    "Tender": {
+      "collection": "tenders",
+      "fields": {
+        "id": { "type": "string", "description": "Tender unique identifier" },
+        "tenderNo": { "type": "string", "description": "NIT / Tender reference number" },
+        "workName": { "type": "string", "description": "Name of work" },
+        "subArea": { "type": "string", "description": "Sub-Area in Nagpur Area" },
+        "department": { "type": "string", "description": "Department name" },
+        "estCostLakhs": { "type": "number", "description": "Estimated cost in Lakhs" },
+        "nitDate": { "type": "string", "description": "NIT issue date" },
+        "bidOpeningDate": { "type": "string", "description": "Technical bid opening date" },
+        "bidValidityDays": { "type": "number", "description": "Bid validity in days" },
+        "status": { "type": "string", "description": "Current tender status" },
+        "remarks": { "type": "string", "description": "Remarks or notes" },
+        "updatedAt": { "type": "string", "description": "Last update ISO timestamp" },
+        "updatedBy": { "type": "string", "description": "User who last updated" }
+      }
+    },
+    "AuditLog": {
+      "collection": "auditLogs",
+      "fields": {
+        "id": { "type": "string", "description": "Log ID" },
+        "timestamp": { "type": "string", "description": "Timestamp ISO string" },
+        "action": { "type": "string", "description": "Action performed" },
+        "details": { "type": "string", "description": "Action details" },
+        "user": { "type": "string", "description": "User username or identifier" },
+        "role": { "type": "string", "description": "User role" }
+      }
+    }
+  }
+}

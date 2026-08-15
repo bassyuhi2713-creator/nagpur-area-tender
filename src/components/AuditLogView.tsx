@@ -1,20 +1,100 @@
-import React from 'react';
-import { AuditLog } from '../types';
-import { ShieldAlert, Trash2, Clock, UserCheck } from 'lucide-react';
+import React, { useRef } from 'react';
+import { AuditLog, Tender } from '../types';
+import { ShieldAlert, Trash2, Clock, UserCheck, Download, Upload, Database } from 'lucide-react';
 
 interface AuditLogViewProps {
   logs: AuditLog[];
+  tenders: Tender[];
   onClearLogs: () => void;
+  onRestoreBackup: (restoredTenders: Tender[]) => void;
   isAdmin: boolean;
 }
 
 export const AuditLogView: React.FC<AuditLogViewProps> = ({
   logs,
+  tenders,
   onClearLogs,
+  onRestoreBackup,
   isAdmin,
 }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExportJSON = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tenders, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `wcl-nagpur-tenders-backup-${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        if (Array.isArray(parsed)) {
+          onRestoreBackup(parsed);
+        } else {
+          alert('Invalid backup file. Array of tenders expected.');
+        }
+      } catch (err) {
+        alert('Failed to parse JSON backup file.');
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   return (
     <div className="space-y-4">
+      {/* Database Backup & Transfer Controls */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-blue-50 text-[#003366] rounded-lg">
+            <Database className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-extrabold text-[#003366]">
+              Database Backup & Multi-Device Transfer
+            </h3>
+            <p className="text-xs text-gray-500">
+              Total active records: <strong className="text-gray-900">{tenders.length} tenders</strong>. Download a backup file or transfer between systems.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportJSON}
+            className="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors border border-slate-300"
+          >
+            <Download className="w-3.5 h-3.5 text-[#003366]" />
+            <span>Download Backup (.json)</span>
+          </button>
+
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            accept=".json"
+            className="hidden"
+          />
+
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="bg-[#003366] hover:bg-[#002244] text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            <span>Restore / Upload Backup</span>
+          </button>
+        </div>
+      </div>
+
       <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs flex items-center justify-between">
         <div>
           <h2 className="text-base font-extrabold text-[#003366] flex items-center gap-2">

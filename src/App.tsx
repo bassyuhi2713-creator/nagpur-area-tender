@@ -18,6 +18,11 @@ import {
   fetchServerLogs,
   saveServerLog,
 } from './utils/tenderApi';
+import {
+  subscribeToTenders,
+  subscribeToLogs,
+  batchSaveFirestoreTenders,
+} from './lib/firebase';
 import { CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 
 export default function App() {
@@ -156,13 +161,68 @@ export default function App() {
     }
   }, []);
 
-  // Initial load + real-time 4-second polling + immediate sync on focus/visibility change
+  // Set up Firebase Real-Time Firestore Sync & Auto-Seed
   useEffect(() => {
+    let isSubscribed = true;
+
+    const unsubTenders = subscribeToTenders(
+      (liveTenders) => {
+        if (!isSubscribed) return;
+        if (liveTenders && liveTenders.length > 0) {
+          setTenders(liveTenders);
+          localStorage.setItem('wcl_tenders_backup', JSON.stringify(liveTenders));
+          setLastSyncedTime(new Date());
+        } else {
+          // If Firestore is empty, seed it from cached local backup or initial data so all devices get it immediately
+          const cachedBackup = localStorage.getItem('wcl_tenders_backup') || localStorage.getItem('wcl_tenders_db');
+          let seedList: Tender[] = [];
+          if (cachedBackup) {
+            try {
+              const parsed = JSON.parse(cachedBackup);
+              if (Array.isArray(parsed) && parsed.length > 0) seedList = parsed;
+            } catch (e) {
+              console.error('Failed to parse local backup:', e);
+            }
+          }
+          if (seedList.length === 0 && INITIAL_TENDERS.length > 0) {
+            seedList = INITIAL_TENDERS;
+          }
+          if (seedList.length > 0) {
+            batchSaveFirestoreTenders(seedList, 'merge').then(() => {
+              if (isSubscribed) {
+                setTenders(seedList);
+                setLastSyncedTime(new Date());
+              }
+            });
+          }
+        }
+      },
+      (err) => {
+        console.warn('Firestore subscription notice, falling back to server polling:', err);
+      }
+    );
+
+    const unsubLogs = subscribeToLogs(
+      (liveLogs) => {
+        if (!isSubscribed) return;
+        if (liveLogs && liveLogs.length > 0) {
+          setLogs(liveLogs);
+          localStorage.setItem('wcl_logs_backup', JSON.stringify(liveLogs));
+        } else if (INITIAL_LOGS.length > 0) {
+          setLogs((current) => (current.length === 0 ? INITIAL_LOGS : current));
+        }
+      },
+      (err) => {
+        console.warn('Firestore logs subscription notice:', err);
+      }
+    );
+
+    // Initial load + periodic fallback polling
     loadDataFromServer(true);
 
     const interval = setInterval(() => {
       loadDataFromServer(false);
-    }, 4000);
+    }, 8000);
 
     const handleWindowFocus = () => {
       loadDataFromServer(false);
@@ -178,6 +238,9 @@ export default function App() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
+      isSubscribed = false;
+      unsubTenders();
+      unsubLogs();
       clearInterval(interval);
       window.removeEventListener('focus', handleWindowFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -418,6 +481,23 @@ export default function App() {
             {activeTab === 'audit' && (
               <AuditLogView
                 logs={logs}
+                tenders={tenders}
+                onRestoreBackup={async (restoredTenders) => {
+                  try {
+                    const res = await batchUploadServerTenders(restoredTenders, 'replace', currentUser.name, currentUser.role);
+                    if (res.success && res.data) {
+                      setTenders(res.data);
+                      showToast(`Successfully restored ${res.data.length} tenders from backup!`, 'success');
+                      addLog('Database Restored', `Restored ${res.data.length} tenders from JSON backup`);
+                    } else {
+                      setTenders(restoredTenders);
+                      showToast(`Restored ${restoredTenders.length} tenders locally.`, 'success');
+                    }
+                  } catch (e) {
+                    setTenders(restoredTenders);
+                    showToast(`Restored ${restoredTenders.length} tenders.`, 'success');
+                  }
+                }}
                 onClearLogs={() => {
                   if (window.confirm('Clear all system activity logs?')) {
                     setLogs([]);
