@@ -173,26 +173,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {subAreaStats.map((item) => {
-            const isNagpurExecution = item.subArea === 'Nagpur Area Execution';
             return (
               <div
                 key={item.subArea}
                 onClick={() => onSelectSubAreaFilter && onSelectSubAreaFilter(item.subArea)}
-                className={`p-4 rounded-xl border transition-all cursor-pointer hover:shadow-md relative ${
-                  isNagpurExecution
-                    ? 'bg-blue-50/70 border-blue-300 ring-2 ring-blue-500/20'
-                    : 'bg-slate-50/50 border-gray-200 hover:border-gray-300'
-                }`}
+                className="p-4 rounded-xl border border-gray-200 bg-slate-50/50 hover:bg-white hover:border-gray-300 transition-all cursor-pointer hover:shadow-md"
               >
-                {isNagpurExecution && (
-                  <span className="absolute top-3 right-3 bg-[#003366] text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
-                    NEW AREA ADDED
-                  </span>
-                )}
-
                 <div className="flex items-center gap-2 mb-2">
-                  <Building2 className={`w-4 h-4 ${isNagpurExecution ? 'text-[#003366]' : 'text-gray-600'}`} />
-                  <h4 className={`font-bold text-sm ${isNagpurExecution ? 'text-[#003366]' : 'text-gray-900'}`}>
+                  <Building2 className="w-4 h-4 text-gray-600" />
+                  <h4 className="font-bold text-sm text-gray-900">
                     {item.subArea}
                   </h4>
                 </div>

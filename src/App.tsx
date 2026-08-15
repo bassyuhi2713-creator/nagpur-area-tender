@@ -85,10 +85,16 @@ export default function App() {
   // Sync state to local storage as client backup
   useEffect(() => {
     localStorage.setItem('wcl_tenders_db', JSON.stringify(tenders));
+    if (tenders.length > 0) {
+      localStorage.setItem('wcl_tenders_backup', JSON.stringify(tenders));
+    }
   }, [tenders]);
 
   useEffect(() => {
     localStorage.setItem('wcl_logs_db', JSON.stringify(logs));
+    if (logs.length > 0) {
+      localStorage.setItem('wcl_logs_backup', JSON.stringify(logs));
+    }
   }, [logs]);
 
   // Load from Central Server API and poll for multi-user / multi-device synchronization
@@ -97,12 +103,49 @@ export default function App() {
     try {
       const serverTenders = await fetchServerTenders();
       if (serverTenders !== null) {
-        setTenders(serverTenders);
+        if (serverTenders.length === 0) {
+          // If server restarted and is empty, check if we have local backup to auto-restore
+          const cachedBackup = localStorage.getItem('wcl_tenders_backup') || localStorage.getItem('wcl_tenders_db');
+          if (cachedBackup) {
+            try {
+              const localList: Tender[] = JSON.parse(cachedBackup);
+              if (Array.isArray(localList) && localList.length > 0) {
+                // Restore to server so all devices and logins have the data
+                const restoreRes = await batchUploadServerTenders(localList, 'merge', 'Auto-Restore', 'System');
+                if (restoreRes.success && restoreRes.data && restoreRes.data.length > 0) {
+                  setTenders(restoreRes.data);
+                } else {
+                  setTenders(localList);
+                }
+              }
+            } catch (e) {
+              console.error('Error parsing local tender backup:', e);
+            }
+          }
+        } else {
+          setTenders(serverTenders);
+          localStorage.setItem('wcl_tenders_backup', JSON.stringify(serverTenders));
+        }
       }
 
       const serverLogs = await fetchServerLogs();
       if (serverLogs !== null) {
-        setLogs(serverLogs);
+        if (serverLogs.length === 0) {
+          const cachedLogs = localStorage.getItem('wcl_logs_backup') || localStorage.getItem('wcl_logs_db');
+          if (cachedLogs) {
+            try {
+              const localLogs: AuditLog[] = JSON.parse(cachedLogs);
+              if (Array.isArray(localLogs) && localLogs.length > 0) {
+                setLogs(localLogs);
+              }
+            } catch (e) {
+              console.error('Error parsing local logs backup:', e);
+            }
+          }
+        } else {
+          setLogs(serverLogs);
+          localStorage.setItem('wcl_logs_backup', JSON.stringify(serverLogs));
+        }
       }
 
       setLastSyncedTime(new Date());
@@ -171,7 +214,7 @@ export default function App() {
     handleCloseAuthModal();
     addLog('Login Success', `User ${user.id} logged in as ${user.role}${user.subArea ? ' (' + user.subArea + ')' : ''}`);
     setActiveTab('dash');
-    showToast(`Welcome, ${user.name}! Connected to Central Cloud Database.`, 'success');
+    showToast(`Welcome, ${user.name}!`, 'success');
   };
 
   const handleLogout = () => {
@@ -192,11 +235,11 @@ export default function App() {
       updatedTenders = [...tenders];
       updatedTenders[existingIndex] = savedTender;
       addLog('Tender Updated', `Tender ${savedTender.id} updated (${savedTender.subArea})`);
-      showToast(`Tender ${savedTender.id} updated and synced across all devices!`, 'success');
+      showToast(`Tender ${savedTender.id} updated successfully.`, 'success');
     } else {
       updatedTenders = [savedTender, ...tenders];
       addLog('Tender Created', `New Tender ${savedTender.id} added for ${savedTender.subArea}`);
-      showToast(`New Tender ${savedTender.id} created and broadcasted to all users!`, 'success');
+      showToast(`New Tender ${savedTender.id} created successfully.`, 'success');
     }
 
     setTenders(updatedTenders);

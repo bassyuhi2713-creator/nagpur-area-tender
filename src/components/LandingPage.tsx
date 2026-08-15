@@ -48,11 +48,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenAuth }) => {
         {/* Sub-Area Engineer */}
         <div
           onClick={() => onOpenAuth('sae', 'Sub-Area Engineer')}
-          className="bg-white p-6 rounded-xl border border-gray-200 border-t-4 border-t-blue-600 shadow-md hover:shadow-xl transition-all cursor-pointer group flex flex-col items-center text-center hover:-translate-y-1 relative"
+          className="bg-white p-6 rounded-xl border border-gray-200 border-t-4 border-t-blue-600 shadow-md hover:shadow-xl transition-all cursor-pointer group flex flex-col items-center text-center hover:-translate-y-1"
         >
-          <span className="absolute top-2 right-2 bg-blue-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase">
-            Includes Nagpur Area Execution
-          </span>
           <div className="p-4 bg-blue-50 text-blue-600 rounded-full mb-4 group-hover:scale-110 transition-transform">
             <HardHat className="w-8 h-8" />
           </div>

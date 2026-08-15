@@ -55,11 +55,6 @@ export const Header: React.FC<HeaderProps> = ({
             <p className="text-[11px] text-gray-600 font-bold uppercase tracking-wider">
               Nagpur Area Civil Division | Tender Portal
             </p>
-            {/* Live Multi-System Sync Indicator */}
-            <div className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-full text-[10px] font-bold">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-              <span>Multi-Device Cloud Synced</span>
-            </div>
           </div>
         </div>
       </div>
