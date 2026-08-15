@@ -66,7 +66,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
     return { willUpdateCount, willAddCount };
   }, [parseResult, existingTenders]);
 
-  if (!isOpen) return null;
+  if (!isOpen || currentUser?.role !== 'Tender Cell') return null;
 
   const handleFileChange = async (selectedFile: File) => {
     if (!selectedFile) return;

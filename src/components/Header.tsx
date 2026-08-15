@@ -73,12 +73,12 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
 
-        {/* Excel Import Button in Header */}
-        {currentUser && onOpenImportModal && (currentUser.role === 'Tender Cell' || currentUser.role === 'Admin' || currentUser.role === 'Staff Officer') && (
+        {/* Excel Import Button in Header (Tender Cell ONLY) */}
+        {currentUser && onOpenImportModal && currentUser.role === 'Tender Cell' && (
           <button
             onClick={onOpenImportModal}
             className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-xs transition-colors cursor-pointer"
-            title="Upload and import Excel / CSV spreadsheet data"
+            title="Upload and import Excel / CSV spreadsheet data (Tender Cell only)"
           >
             <span>📊</span>
             <span>Import Excel</span>

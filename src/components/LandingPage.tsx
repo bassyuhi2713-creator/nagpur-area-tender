@@ -37,7 +37,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenAuth }) => {
             Area Office Review
           </span>
           <p className="text-xs text-gray-600 mt-2 flex-1">
-            View-only executive oversight across all 6 sub-areas with urgent validity alerts.
+            Executive oversight across all 6 sub-areas with data filtering, search, CSV export, and urgent validity alerts.
           </p>
           <div className="mt-4 pt-3 border-t border-gray-100 w-full flex items-center justify-center gap-1 text-xs font-bold text-[#003366]">
             <span>Access Portal</span>
@@ -60,7 +60,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenAuth }) => {
             Sub-Area Execution
           </span>
           <p className="text-xs text-gray-600 mt-2 flex-1">
-            Area-specific tracking for Nagpur Area Execution, Saoner, Silewara, etc.
+            Area-specific tracking and CSV export for Nagpur Area Execution, Saoner, Silewara, etc.
           </p>
           <div className="mt-4 pt-3 border-t border-gray-100 w-full flex items-center justify-center gap-1 text-xs font-bold text-blue-600">
             <span>Access Portal</span>
@@ -80,10 +80,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenAuth }) => {
             Tender Cell
           </h3>
           <span className="mt-1 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-            Data Management
+            Master Data & Import
           </span>
           <p className="text-xs text-gray-600 mt-2 flex-1">
-            Full permissions to add new tenders, update TCR dates, status, and remarks.
+            Exclusive permissions to import Excel spreadsheets, add new tenders, update TCR dates, status, and remarks.
           </p>
           <div className="mt-4 pt-3 border-t border-gray-100 w-full flex items-center justify-center gap-1 text-xs font-bold text-emerald-600">
             <span>Access Portal</span>

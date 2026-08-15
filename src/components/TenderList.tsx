@@ -179,11 +179,11 @@ export const TenderList: React.FC<TenderListProps> = ({
             </button>
           )}
 
-          {onOpenImportModal && (currentUser.role === 'Tender Cell' || currentUser.role === 'Admin' || currentUser.role === 'Staff Officer') && (
+          {onOpenImportModal && currentUser.role === 'Tender Cell' && (
             <button
               onClick={onOpenImportModal}
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg flex items-center gap-1 shadow-xs transition-colors cursor-pointer shrink-0"
-              title="Upload and import Excel / CSV spreadsheet data"
+              title="Upload and import Excel / CSV spreadsheet data (Tender Cell only)"
             >
               <UploadCloud className="w-3.5 h-3.5" />
               <span>Import Excel</span>

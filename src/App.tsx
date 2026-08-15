@@ -324,6 +324,10 @@ export default function App() {
   };
 
   const handleBatchImport = async (importedTenders: Tender[], mode: 'merge' | 'replace') => {
+    if (currentUser?.role !== 'Tender Cell') {
+      showToast('Unauthorized: Only Tender Cell can import Excel files.', 'error');
+      return;
+    }
     setIsSyncing(true);
     try {
       const res = await batchUploadServerTenders(
@@ -430,7 +434,7 @@ export default function App() {
         currentUser={currentUser}
         tenders={tenders}
         onOpenUrgentTab={() => setActiveTab('urgent')}
-        onOpenImportModal={() => setIsImportModalOpen(true)}
+        onOpenImportModal={currentUser?.role === 'Tender Cell' ? () => setIsImportModalOpen(true) : undefined}
         onRefreshData={() => {
           loadDataFromServer(true);
           showToast('Refreshing tender data from central server...', 'info');
@@ -474,7 +478,7 @@ export default function App() {
                 onOpenAddModal={handleOpenAddModal}
                 onOpenEditModal={handleOpenEditModal}
                 onDeleteTender={handleDeleteTender}
-                onOpenImportModal={() => setIsImportModalOpen(true)}
+                onOpenImportModal={currentUser?.role === 'Tender Cell' ? () => setIsImportModalOpen(true) : undefined}
               />
             )}
 
